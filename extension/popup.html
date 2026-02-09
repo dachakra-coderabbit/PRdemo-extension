@@ -77,6 +77,17 @@
         <div id="priorityDistribution" class="distribution-grid"></div>
       </div>
 
+      <!-- Priority Filter -->
+      <div class="priority-filter-section" id="priorityFilterSection" style="display: none;">
+        <div class="priority-filter-label">Filter by Priority:</div>
+        <div class="priority-filter-controls" id="priorityFilterControls">
+          <button class="priority-filter-btn active" data-priority="all">
+            All (<span class="priority-count" id="priorityCountAll">0</span>)
+          </button>
+          <!-- Dynamic buttons for each priority will be added via JS -->
+        </div>
+      </div>
+
       <!-- Comment Titles -->
       <div class="titles-section">
         <h2>📝 All Comment Titles</h2>

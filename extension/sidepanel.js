@@ -1,6 +1,7 @@
 // Side panel script for CodeRabbit PR Analyzer
 
 let currentData = null;
+let selectedPriorities = new Set(['all']);
 
 // Initialize date inputs with default values
 document.addEventListener('DOMContentLoaded', () => {
@@ -173,6 +174,10 @@ async function handleAnalyze() {
 }
 
 function displayResults(data) {
+  // Store data for filtering
+  currentData = data;
+  selectedPriorities = new Set(['all']);
+
   // Show results section
   document.getElementById('results').style.display = 'block';
 
@@ -191,6 +196,9 @@ function displayResults(data) {
 
   // Display priority distribution
   displayDistribution('priorityDistribution', priorityDist);
+
+  // Initialize priority filter
+  initializePriorityFilter(data);
 
   // Display titles
   displayTitles('commentTitles', titles);
@@ -235,7 +243,8 @@ function extractTitles(data) {
       titleGroups[title].push({
         url: issue.url,
         prNumber: pr.number,
-        prTitle: pr.title
+        prTitle: pr.title,
+        priority: issue.priority
       });
     });
   });
@@ -306,6 +315,109 @@ function groupSimilarTitles(titles) {
   return groups.sort((a, b) => b.totalCount - a.totalCount);
 }
 
+function initializePriorityFilter(data) {
+  // Extract unique priorities and their counts
+  const priorityCounts = {};
+  let totalTitles = 0;
+
+  data.pullRequests.forEach(pr => {
+    pr.actionableIssues.forEach(issue => {
+      const priority = issue.priority || 'Unknown';
+      priorityCounts[priority] = (priorityCounts[priority] || 0) + 1;
+      totalTitles++;
+    });
+  });
+
+  // Show the filter section
+  const filterSection = document.getElementById('priorityFilterSection');
+  filterSection.style.display = 'block';
+
+  // Update "All" button count
+  document.getElementById('priorityCountAll').textContent = totalTitles;
+
+  // Get the controls container
+  const controlsContainer = document.getElementById('priorityFilterControls');
+
+  // Clear any existing dynamic buttons (keep the "All" button)
+  const allButton = controlsContainer.querySelector('[data-priority="all"]');
+  controlsContainer.innerHTML = '';
+  controlsContainer.appendChild(allButton);
+
+  // Create buttons for each priority
+  Object.entries(priorityCounts)
+    .sort((a, b) => b[1] - a[1]) // Sort by count descending
+    .forEach(([priority, count]) => {
+      const button = document.createElement('button');
+      button.className = 'priority-filter-btn';
+      button.setAttribute('data-priority', priority);
+      button.innerHTML = `${priority} (<span class="priority-count">${count}</span>)`;
+      controlsContainer.appendChild(button);
+    });
+
+  // Add click handlers to all filter buttons
+  controlsContainer.querySelectorAll('.priority-filter-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const priority = button.getAttribute('data-priority');
+
+      if (priority === 'all') {
+        // Select all, deselect others
+        selectedPriorities.clear();
+        selectedPriorities.add('all');
+        controlsContainer.querySelectorAll('.priority-filter-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        button.classList.add('active');
+      } else {
+        // Toggle specific priority
+        if (selectedPriorities.has('all')) {
+          selectedPriorities.clear();
+        }
+
+        if (selectedPriorities.has(priority)) {
+          selectedPriorities.delete(priority);
+        } else {
+          selectedPriorities.add(priority);
+        }
+
+        // If no priorities selected, select all
+        if (selectedPriorities.size === 0) {
+          selectedPriorities.add('all');
+          allButton.classList.add('active');
+        } else {
+          allButton.classList.remove('active');
+        }
+
+        // Update button state
+        button.classList.toggle('active', selectedPriorities.has(priority));
+      }
+
+      // Apply the filter
+      applyPriorityFilter();
+    });
+  });
+}
+
+function applyPriorityFilter() {
+  if (!currentData) return;
+
+  // Extract and group titles
+  const titles = extractTitles(currentData);
+
+  // Filter by priority if not showing all
+  let filteredTitles = titles;
+  if (!selectedPriorities.has('all')) {
+    filteredTitles = titles.filter(group => {
+      // Check if any occurrence in the group matches selected priorities
+      return group.allOccurrences.some(occurrence =>
+        selectedPriorities.has(occurrence.priority)
+      );
+    });
+  }
+
+  // Display filtered titles
+  displayTitles('commentTitles', filteredTitles);
+}
+
 function displayDistribution(elementId, distribution) {
   const container = document.getElementById(elementId);
   container.innerHTML = '';
@@ -334,7 +446,10 @@ function displayTitles(elementId, groups) {
   container.innerHTML = '';
 
   if (groups.length === 0) {
-    container.innerHTML = '<div class="empty-state">No titles found</div>';
+    const message = selectedPriorities.has('all')
+      ? 'No titles found'
+      : 'No titles match the selected priority filters';
+    container.innerHTML = `<div class="empty-state">${message}</div>`;
     return;
   }
 
