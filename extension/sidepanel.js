@@ -93,15 +93,38 @@ function showError(message) {
   }, 5000);
 }
 
-function showProgress(message) {
+function showProgress(message, progressData = null) {
   const progressDiv = document.getElementById('progressMessage');
   const progressText = progressDiv.querySelector('.progress-text');
+  const progressBarFill = document.getElementById('progressBarFill');
+  const progressPercentage = document.getElementById('progressPercentage');
+
   progressText.textContent = message;
   progressDiv.style.display = 'block';
+
+  // Update progress bar if progress data is provided
+  if (progressData && progressData.current !== undefined && progressData.total !== undefined) {
+    const percentage = progressData.total > 0
+      ? Math.round((progressData.current / progressData.total) * 100)
+      : 0;
+
+    progressBarFill.style.width = `${percentage}%`;
+    progressPercentage.textContent = `${percentage}%`;
+  } else {
+    // Reset progress bar if no data
+    progressBarFill.style.width = '0%';
+    progressPercentage.textContent = '0%';
+  }
 }
 
 function hideProgress() {
-  document.getElementById('progressMessage').style.display = 'none';
+  const progressDiv = document.getElementById('progressMessage');
+  const progressBarFill = document.getElementById('progressBarFill');
+  const progressPercentage = document.getElementById('progressPercentage');
+
+  progressDiv.style.display = 'none';
+  progressBarFill.style.width = '0%';
+  progressPercentage.textContent = '0%';
 }
 
 function setLoading(isLoading) {
@@ -168,7 +191,7 @@ async function handleAnalyze() {
     const data = await api.analyzePRs((progress) => {
       console.log('Progress:', progress);
       if (progress.status) {
-        showProgress(`⏳ ${progress.status}`);
+        showProgress(`⏳ ${progress.status}`, progress);
       }
     });
 
