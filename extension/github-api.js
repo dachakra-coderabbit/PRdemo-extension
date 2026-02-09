@@ -96,17 +96,27 @@ class GitHubAPI {
     let results = [];
     let page = 1;
     let hasMore = true;
+    const per_page = 100;
 
     while (hasMore) {
-      const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}per_page=100&page=${page}`;
+      const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}per_page=${per_page}&page=${page}`;
       const data = await this.fetchWithRetry(url);
 
       // Handle both direct array responses and Search API responses (with 'items' array)
       let items;
+      let maxPages = null;
+
       if (Array.isArray(data)) {
+        // Direct array response (regular API)
         items = data;
       } else if (data && Array.isArray(data.items)) {
+        // Search API response (has 1,000 result cap)
         items = data.items;
+
+        // GitHub Search API caps results at 1,000 (10 pages of 100)
+        if (data.total_count !== undefined) {
+          maxPages = Math.ceil(Math.min(data.total_count, 1000) / per_page);
+        }
       } else {
         items = [];
       }
@@ -114,7 +124,15 @@ class GitHubAPI {
       if (items.length > 0) {
         results = results.concat(items);
         page++;
-        hasMore = items.length === 100;
+
+        // Determine if there are more pages
+        if (maxPages !== null) {
+          // Search API: respect the 1,000 result cap
+          hasMore = page <= maxPages;
+        } else {
+          // Regular API: check if we got a full page
+          hasMore = items.length === per_page;
+        }
 
         if (progressCallback) {
           progressCallback({ page, total: results.length });
