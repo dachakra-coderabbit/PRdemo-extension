@@ -76,6 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (result.repository) {
       document.getElementById('repository').value = result.repository;
     }
+    // Update the GitHub search link after loading saved values
+    updateGitHubSearchLink();
   });
 
   // Check for existing analysis on load
@@ -85,7 +87,46 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('analyzeBtn').addEventListener('click', handleAnalyze);
   document.getElementById('exportBtn').addEventListener('click', handleExport);
   document.getElementById('newAnalysisBtn').addEventListener('click', handleNewAnalysis);
+
+  // Set up GitHub search link updater
+  const orgInput = document.getElementById('organization');
+  const repoInput = document.getElementById('repository');
+  orgInput.addEventListener('input', updateGitHubSearchLink);
+  repoInput.addEventListener('input', updateGitHubSearchLink);
+  startDateInput.addEventListener('change', updateGitHubSearchLink);
+  endDateInput.addEventListener('change', updateGitHubSearchLink);
+
+  // Initialize the GitHub search link
+  updateGitHubSearchLink();
 });
+
+// Update the GitHub search link based on input values
+function updateGitHubSearchLink() {
+  const organization = document.getElementById('organization').value.trim();
+  const repository = document.getElementById('repository').value.trim();
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
+  const linkElement = document.getElementById('githubSearchLink');
+
+  // Check if all required fields are filled
+  if (organization && repository && startDate && endDate) {
+    // Build the GitHub search URL to match the extension's search criteria
+    // Format: https://github.com/search?q=repo:org/repo+is:pr+is:closed+created:YYYY-MM-DD..YYYY-MM-DD&type=pullrequests
+    // Note: GitHub search will show ALL closed PRs, but the extension only analyzes those with CodeRabbit comments
+    const searchQuery = `repo:${organization}/${repository} is:pr is:closed created:${startDate}..${endDate}`;
+    const encodedQuery = encodeURIComponent(searchQuery);
+    const githubUrl = `https://github.com/search?q=${encodedQuery}&type=pullrequests`;
+
+    linkElement.href = githubUrl;
+    linkElement.style.pointerEvents = 'auto';
+    linkElement.style.opacity = '1';
+  } else {
+    // Disable the link if fields are missing
+    linkElement.href = '#';
+    linkElement.style.pointerEvents = 'none';
+    linkElement.style.opacity = '0.5';
+  }
+}
 
 // Check if there's an analysis in progress or completed
 function checkExistingAnalysis() {
@@ -293,7 +334,8 @@ function displayResults(data) {
   document.getElementById('results').style.display = 'block';
 
   // Display summary stats
-  document.getElementById('totalPRs').textContent = data.summary.totalPRsWithActionableIssues;
+  document.getElementById('totalPRs').textContent = data.summary.totalPRs;
+  document.getElementById('totalPRsReviewed').textContent = data.summary.totalPRsWithActionableIssues;
   document.getElementById('totalComments').textContent = data.summary.totalActionableIssues;
   document.getElementById('avgComments').textContent = data.summary.avgIssuesPerPR;
 
