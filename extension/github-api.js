@@ -12,9 +12,9 @@ class GitHubAPI {
     this.token = token || GITHUB_TOKEN;
     this.rateLimitRemaining = null;
 
-    // Log token status for debugging
+    // Log token status for debugging (never log the actual token!)
     if (this.token) {
-      console.log(`GitHub API initialized with token: ${this.token.substring(0, 7)}...`);
+      console.log('✅ GitHub API initialized (token provided) - 5,000 requests/hour available');
     } else {
       console.warn('⚠️ WARNING: No GitHub token found! Using unauthenticated requests (60/hour limit). Add token to config.js for 5,000/hour limit.');
     }
