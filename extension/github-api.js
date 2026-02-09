@@ -11,6 +11,13 @@ class GitHubAPI {
     this.endDate = endDate;
     this.token = token || GITHUB_TOKEN;
     this.rateLimitRemaining = null;
+
+    // Log token status for debugging
+    if (this.token) {
+      console.log(`GitHub API initialized with token: ${this.token.substring(0, 7)}...`);
+    } else {
+      console.warn('⚠️ WARNING: No GitHub token found! Using unauthenticated requests (60/hour limit). Add token to config.js for 5,000/hour limit.');
+    }
   }
 
   async fetchWithRetry(url, retries = 3) {
@@ -22,6 +29,7 @@ class GitHubAPI {
         };
 
         // Add authorization if token is provided
+        const isAuthenticated = !!this.token;
         if (this.token) {
           headers['Authorization'] = `token ${this.token}`;
         }
@@ -30,8 +38,14 @@ class GitHubAPI {
 
         // Update rate limit info
         const rateLimitRemaining = response.headers.get('x-ratelimit-remaining');
+        const rateLimitLimit = response.headers.get('x-ratelimit-limit');
         const rateLimitReset = response.headers.get('x-ratelimit-reset');
         this.rateLimitRemaining = rateLimitRemaining;
+
+        // Log rate limit info on first request
+        if (i === 0) {
+          console.log(`GitHub API Rate Limit: ${rateLimitRemaining}/${rateLimitLimit} remaining (${isAuthenticated ? 'Authenticated' : 'Unauthenticated'})`);
+        }
 
         if (response.status === 403) {
           // Check if it's a rate limit error
@@ -40,9 +54,13 @@ class GitHubAPI {
             const resetDate = new Date(resetTime);
             const minutesUntilReset = Math.ceil((resetTime - Date.now()) / 1000 / 60);
 
+            const authStatus = isAuthenticated ? 'Authenticated' : 'Unauthenticated';
+            const expectedLimit = isAuthenticated ? '5,000' : '60';
+
             throw new Error(
-              `GitHub API rate limit exceeded. ` +
+              `GitHub API rate limit exceeded (${authStatus}, limit: ${expectedLimit}/hour). ` +
               `Limit resets in ${minutesUntilReset} minutes (at ${resetDate.toLocaleTimeString()}). ` +
+              `${!isAuthenticated ? 'NOTICE: Token not found! Check config.js. ' : ''}` +
               `Try again later or reduce your date range.`
             );
           }
