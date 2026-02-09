@@ -1,13 +1,15 @@
 // GitHub API module for fetching CodeRabbit PR data using GitHub token
 const CODERABBIT_USERNAME = 'coderabbitai[bot]';
+// Token is loaded from config.js (not committed to git)
+const GITHUB_TOKEN = window.CONFIG?.GITHUB_TOKEN || '';
 
 class GitHubAPI {
-  constructor(owner, repo, startDate, endDate, token) {
+  constructor(owner, repo, startDate, endDate, token = GITHUB_TOKEN) {
     this.owner = owner;
     this.repo = repo;
     this.startDate = startDate;
     this.endDate = endDate;
-    this.token = token;
+    this.token = token || GITHUB_TOKEN;
     this.rateLimitRemaining = null;
   }
 

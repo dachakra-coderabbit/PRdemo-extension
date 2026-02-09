@@ -57,15 +57,12 @@ document.addEventListener('DOMContentLoaded', () => {
   endDateInput.addEventListener('change', updateDateConstraints);
 
   // Load saved values from storage
-  chrome.storage.local.get(['organization', 'repository', 'githubToken'], (result) => {
+  chrome.storage.local.get(['organization', 'repository'], (result) => {
     if (result.organization) {
       document.getElementById('organization').value = result.organization;
     }
     if (result.repository) {
       document.getElementById('repository').value = result.repository;
-    }
-    if (result.githubToken) {
-      document.getElementById('githubToken').value = result.githubToken;
     }
   });
 
@@ -172,18 +169,12 @@ function setLoading(isLoading) {
 async function handleAnalyze() {
   const organization = document.getElementById('organization').value.trim();
   const repository = document.getElementById('repository').value.trim();
-  const githubToken = document.getElementById('githubToken').value.trim();
   const startDate = document.getElementById('startDate').value;
   const endDate = document.getElementById('endDate').value;
 
   // Validation
   if (!organization || !repository) {
     showError('Please enter both organization and repository name');
-    return;
-  }
-
-  if (!githubToken) {
-    showError('Please enter your GitHub Personal Access Token. This is required to avoid rate limits.');
     return;
   }
 
@@ -216,7 +207,7 @@ async function handleAnalyze() {
   }
 
   // Save values to storage
-  chrome.storage.local.set({ organization, repository, githubToken });
+  chrome.storage.local.set({ organization, repository });
 
   // Hide previous results and errors
   document.getElementById('results').style.display = 'none';
@@ -232,8 +223,7 @@ async function handleAnalyze() {
       organization,
       repository,
       startDate,
-      endDate,
-      githubToken
+      endDate
     }
   }, (response) => {
     if (chrome.runtime.lastError) {

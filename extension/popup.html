@@ -24,17 +24,6 @@
         <input type="text" id="repository" placeholder="e.g., react" />
       </div>
 
-      <div class="form-group">
-        <label for="githubToken">
-          GitHub Personal Access Token
-          <a href="https://github.com/settings/tokens/new?scopes=repo&description=CodeRabbit%20Analyzer" target="_blank" class="token-help">
-            (Get token)
-          </a>
-        </label>
-        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxx" />
-        <small class="form-hint">Required for higher rate limits (5,000/hour vs 60/hour)</small>
-      </div>
-
       <div class="date-range">
         <div class="form-group">
           <label for="startDate">Start Date</label>
@@ -106,6 +95,7 @@
     </div>
   </div>
 
+  <script src="config.js"></script>
   <script src="github-api.js"></script>
   <script src="popup.js"></script>
 </body>

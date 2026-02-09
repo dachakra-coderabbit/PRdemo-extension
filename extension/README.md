@@ -7,30 +7,36 @@ A Chrome/Edge browser extension that analyzes CodeRabbit AI comments across your
 - 🔍 **PR Analysis**: Fetches and analyzes all PRs from a GitHub repository
 - 📊 **Comment Distribution**: Shows distribution of comments by severity and priority
 - 📝 **Title Tracking**: Lists all unique comment titles with occurrence counts
-- 🔐 **Session-Based**: Uses your existing GitHub browser session (no token needed)
+- 🔐 **Token-Based Auth**: Uses a hardcoded GitHub token for authentication
 - 💾 **Export Data**: Download analysis results as JSON
 
 ## Installation
 
 ### Chrome/Edge
 
-1. Open Chrome/Edge and navigate to `chrome://extensions/` (or `edge://extensions/`)
+1. **Set up GitHub token**:
+   - Copy `.env.example` to `.env` in the project root
+   - Generate a GitHub token at https://github.com/settings/tokens/new
+     - For classic token: Check the `repo` scope
+     - For fine-grained token: Set "Pull requests" to Read-only
+   - Replace `ghp_YOUR_TOKEN_HERE` in `.env` with your actual token
+   - Run `node build-config.js` to generate `config.js` from `.env`
 
-2. Enable **Developer mode** (toggle in top-right corner)
+2. Open Chrome/Edge and navigate to `chrome://extensions/` (or `edge://extensions/`)
 
-3. Click **Load unpacked**
+3. Enable **Developer mode** (toggle in top-right corner)
 
-4. Select the `extension` folder from this project
+4. Click **Load unpacked**
 
-5. The extension icon should appear in your browser toolbar
+5. Select the `extension` folder from this project
+
+6. The extension icon should appear in your browser toolbar
 
 ## Usage
 
-1. **Log in to GitHub**: Make sure you're logged in to GitHub in your browser
+1. **Click the extension icon** in your browser toolbar
 
-2. **Click the extension icon** in your browser toolbar
-
-3. **Enter details**:
+2. **Enter details**:
    - Organization/Owner (e.g., `facebook`)
    - Repository Name (e.g., `react`)
    - Date Range (defaults to last 90 days)
@@ -48,7 +54,7 @@ A Chrome/Edge browser extension that analyzes CodeRabbit AI comments across your
 ## How It Works
 
 The extension:
-1. Uses your browser's GitHub session cookies for authentication
+1. Uses a hardcoded GitHub token for authentication
 2. Calls the GitHub API to fetch all PRs in the specified date range
 3. For each PR, fetches all comments from the `coderabbitai[bot]` user
 4. Parses CodeRabbit's comment format to extract severity, priority, and titles
@@ -78,7 +84,6 @@ Description text...
 ## Permissions
 
 The extension requires these permissions:
-- `cookies`: To use your GitHub session for API authentication
 - `storage`: To save your organization/repository preferences
 - `https://github.com/*`: To access GitHub
 - `https://api.github.com/*`: To call the GitHub API
@@ -87,14 +92,16 @@ The extension requires these permissions:
 
 - All data processing happens locally in your browser
 - No data is sent to external servers
-- The extension only accesses GitHub using your existing session
-- GitHub API rate limits apply (5,000 requests/hour for authenticated users)
+- The extension uses a configured GitHub token for API access
+- GitHub API rate limits apply (5,000 requests/hour for authenticated tokens)
 
 ## Troubleshooting
 
 ### "Not authenticated with GitHub"
-- Make sure you're logged in to GitHub in the same browser
-- Try refreshing github.com and then running the analysis again
+- Make sure you've created `.env` from `.env.example` with a valid token
+- Run `node build-config.js` to generate `config.js`
+- Verify your GitHub token is valid: `curl -H "Authorization: token YOUR_TOKEN" https://api.github.com/user`
+- Reload the extension in Chrome after regenerating `config.js`
 
 ### "Rate limit exceeded"
 - GitHub limits API requests to 5,000 per hour
@@ -110,21 +117,33 @@ The extension requires these permissions:
 
 ### Project Structure
 ```
-extension/
-├── manifest.json       # Extension configuration
-├── popup.html         # Main UI
-├── popup.css          # Styling
-├── popup.js           # UI logic and event handling
-├── github-api.js      # GitHub API wrapper
-├── background.js      # Service worker
-└── icons/            # Extension icons (add your own)
+project-root/
+├── .env               # GitHub token (DO NOT COMMIT)
+├── .env.example       # Template for .env
+├── build-config.js    # Build script to generate config.js from .env
+├── .gitignore         # Git ignore rules
+└── extension/
+    ├── manifest.json       # Extension configuration
+    ├── config.js          # Auto-generated from .env (DO NOT COMMIT)
+    ├── sidepanel.html     # Side panel UI
+    ├── popup.html         # Popup UI
+    ├── popup.css          # Styling
+    ├── sidepanel.js       # Side panel logic
+    ├── popup.js           # Popup logic
+    ├── github-api.js      # GitHub API wrapper
+    └── background.js      # Service worker
 ```
+
+**Important**:
+- Never commit `.env` or `config.js` - they contain your GitHub token!
+- Run `node build-config.js` after updating `.env` to regenerate `config.js`
 
 ### Testing Changes
 1. Make your code changes
-2. Go to `chrome://extensions/`
-3. Click the refresh icon on the extension card
-4. Test the changes
+2. If you updated `.env`, run `node build-config.js` to regenerate `config.js`
+3. Go to `chrome://extensions/`
+4. Click the refresh icon on the extension card
+5. Test the changes
 
 ## Future Enhancements
 
