@@ -12,9 +12,9 @@ class GitHubAPI {
     this.token = token || GITHUB_TOKEN;
     this.rateLimitRemaining = null;
 
-    // Log token status for debugging
+    // Log token status for debugging (never log the actual token!)
     if (this.token) {
-      console.log(`GitHub API initialized with token: ${this.token.substring(0, 7)}...`);
+      console.log('✅ GitHub API initialized (token provided) - 5,000 requests/hour available');
     } else {
       console.warn('⚠️ WARNING: No GitHub token found! Using unauthenticated requests (60/hour limit). Add token to config.js for 5,000/hour limit.');
     }
@@ -96,15 +96,43 @@ class GitHubAPI {
     let results = [];
     let page = 1;
     let hasMore = true;
+    const per_page = 100;
 
     while (hasMore) {
-      const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}per_page=100&page=${page}`;
+      const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}per_page=${per_page}&page=${page}`;
       const data = await this.fetchWithRetry(url);
 
-      if (Array.isArray(data) && data.length > 0) {
-        results = results.concat(data);
+      // Handle both direct array responses and Search API responses (with 'items' array)
+      let items;
+      let maxPages = null;
+
+      if (Array.isArray(data)) {
+        // Direct array response (regular API)
+        items = data;
+      } else if (data && Array.isArray(data.items)) {
+        // Search API response (has 1,000 result cap)
+        items = data.items;
+
+        // GitHub Search API caps results at 1,000 (10 pages of 100)
+        if (data.total_count !== undefined) {
+          maxPages = Math.ceil(Math.min(data.total_count, 1000) / per_page);
+        }
+      } else {
+        items = [];
+      }
+
+      if (items.length > 0) {
+        results = results.concat(items);
         page++;
-        hasMore = data.length === 100;
+
+        // Determine if there are more pages
+        if (maxPages !== null) {
+          // Search API: respect the 1,000 result cap
+          hasMore = page <= maxPages;
+        } else {
+          // Regular API: check if we got a full page
+          hasMore = items.length === per_page;
+        }
 
         if (progressCallback) {
           progressCallback({ page, total: results.length });
@@ -218,23 +246,36 @@ class GitHubAPI {
 
   async analyzePRs(progressCallback) {
     try {
-      // Fetch all PRs (state=closed to get merged PRs)
-      progressCallback({ status: 'Fetching merged PRs from GitHub...' });
-      const prsUrl = `https://api.github.com/repos/${this.owner}/${this.repo}/pulls?state=closed&sort=created&direction=desc`;
-      const allPRs = await this.fetchAllPages(prsUrl);
+      // Use Search API to fetch closed PRs (both merged and closed-without-merging) in date range
+      progressCallback({ status: 'Fetching closed PRs from GitHub...' });
 
-      // Filter PRs by date range and merged status
-      const filteredPRs = allPRs.filter(pr => {
-        // Only include merged PRs
-        if (!pr.merged_at) return false;
+      // Format dates for GitHub search query (YYYY-MM-DD)
+      const startDateStr = this.startDate.toISOString().split('T')[0];
+      const endDateStr = this.endDate.toISOString().split('T')[0];
 
-        // Check if PR was created in the date range
-        const createdAt = new Date(pr.created_at);
-        return createdAt >= this.startDate && createdAt <= this.endDate;
-      });
+      // GitHub Search API: type:pr is:closed repo:owner/repo created:start..end
+      // is:closed includes both merged PRs and closed-without-merging PRs
+      const searchQuery = `type:pr is:closed repo:${this.owner}/${this.repo} created:${startDateStr}..${endDateStr}`;
+      const searchUrl = `https://api.github.com/search/issues?q=${encodeURIComponent(searchQuery)}&sort=created&order=desc&per_page=100`;
+
+      const searchResults = await this.fetchAllPages(searchUrl);
+
+      // Search API returns items in 'items' array, convert to PR format
+      const allPRs = searchResults.map(item => ({
+        number: item.number,
+        title: item.title,
+        state: item.state,
+        created_at: item.created_at,
+        merged_at: item.closed_at, // Use closed_at for all closed PRs
+        html_url: item.html_url,
+        user: item.user
+      }));
+
+      // All PRs from search are already closed (merged or not) and in date range
+      const filteredPRs = allPRs;
 
       progressCallback({
-        status: `Found ${filteredPRs.length} merged PRs. Analyzing comments...`,
+        status: `Found ${filteredPRs.length} closed PRs. Analyzing comments...`,
         total: filteredPRs.length
       });
 
