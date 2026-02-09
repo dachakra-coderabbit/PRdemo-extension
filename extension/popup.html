@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeRabbit PR Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 CodeRabbit PR Analyzer</h1>
+      <p class="subtitle">Analyze CodeRabbit comments across your GitHub PRs</p>
+    </header>
+
+    <div class="input-section">
+      <div class="form-group">
+        <label for="organization">Organization/Owner</label>
+        <input type="text" id="organization" placeholder="e.g., facebook" />
+      </div>
+
+      <div class="form-group">
+        <label for="repository">Repository Name</label>
+        <input type="text" id="repository" placeholder="e.g., react" />
+      </div>
+
+      <div class="form-group">
+        <label for="githubToken">
+          GitHub Personal Access Token
+          <a href="https://github.com/settings/tokens/new?scopes=repo&description=CodeRabbit%20Analyzer" target="_blank" class="token-help">
+            (Get token)
+          </a>
+        </label>
+        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxx" />
+        <small class="form-hint">Required for higher rate limits (5,000/hour vs 60/hour)</small>
+      </div>
+
+      <div class="date-range">
+        <div class="form-group">
+          <label for="startDate">Start Date</label>
+          <input type="date" id="startDate" />
+        </div>
+        <div class="form-group">
+          <label for="endDate">End Date</label>
+          <input type="date" id="endDate" />
+        </div>
+      </div>
+
+      <button id="analyzeBtn" class="btn-primary">
+        <span class="btn-text">Analyze PRs</span>
+        <span class="btn-loader" style="display: none;">⏳ Loading...</span>
+      </button>
+    </div>
+
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+    <div id="progressMessage" class="progress-message" style="display: none;">
+      <div class="progress-text">⏳ Initializing...</div>
+      <div class="progress-hint">💡 Tip: Analysis runs in background. You can close this popup and return later!</div>
+    </div>
+
+    <div id="results" class="results-section" style="display: none;">
+      <!-- Summary Stats -->
+      <div class="summary-stats">
+        <div class="stat-card">
+          <div class="stat-label">Total PRs Reviewed</div>
+          <div class="stat-value" id="totalPRs">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Comments</div>
+          <div class="stat-value" id="totalComments">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg per PR</div>
+          <div class="stat-value" id="avgComments">0</div>
+        </div>
+      </div>
+
+      <!-- Severity Distribution -->
+      <div class="distribution-section">
+        <h2>📊 Comment Distribution by Severity</h2>
+        <div id="severityDistribution" class="distribution-grid"></div>
+      </div>
+
+      <!-- Priority Distribution -->
+      <div class="distribution-section">
+        <h2>🎯 Comment Distribution by Priority</h2>
+        <div id="priorityDistribution" class="distribution-grid"></div>
+      </div>
+
+      <!-- Comment Titles -->
+      <div class="titles-section">
+        <h2>📝 All Comment Titles</h2>
+        <div id="commentTitles" class="titles-list"></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button id="exportBtn" class="btn-secondary">
+          📥 Export Data as JSON
+        </button>
+        <button id="newAnalysisBtn" class="btn-secondary btn-outline">
+          🔄 New Analysis
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="github-api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
