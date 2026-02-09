@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodeRabbit PR Analyzer</title>
+  <title>PR Hopper</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>🤖 CodeRabbit PR Analyzer</h1>
+      <h1>PR Hopper</h1>
       <p class="subtitle">Analyze CodeRabbit comments across your GitHub PRs</p>
     </header>
 
@@ -39,6 +39,12 @@
         <span class="btn-text">Analyze PRs</span>
         <span class="btn-loader" style="display: none;">⏳ Loading...</span>
       </button>
+
+      <div class="github-search-link-container">
+        <a id="githubSearchLink" href="#" target="_blank" rel="noopener noreferrer" class="github-search-link">
+          View PRs on GitHub
+        </a>
+      </div>
     </div>
 
     <div id="errorMessage" class="error-message" style="display: none;"></div>
@@ -57,8 +63,12 @@
       <!-- Summary Stats -->
       <div class="summary-stats">
         <div class="stat-card">
-          <div class="stat-label">Total PRs Reviewed</div>
+          <div class="stat-label">Total PRs</div>
           <div class="stat-value" id="totalPRs">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">REVIEWED PRS</div>
+          <div class="stat-value" id="totalPRsReviewed">0</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Total Comments</div>

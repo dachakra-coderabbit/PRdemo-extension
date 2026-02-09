@@ -364,6 +364,7 @@ class GitHubAPI {
           end: this.endDate.toISOString().split('T')[0]
         },
         summary: {
+          totalPRs: filteredPRs.length,
           totalPRsWithActionableIssues: prsWithIssues.length,
           totalActionableIssues: totalActionableIssues,
           avgIssuesPerPR: prsWithIssues.length > 0

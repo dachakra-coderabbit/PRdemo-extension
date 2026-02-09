@@ -231,7 +231,7 @@ h1 {
 
 .summary-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 24px;
 }
@@ -508,6 +508,30 @@ h1 {
   padding: 20px;
   color: #718096;
   font-size: 14px;
+}
+
+/* GitHub Search Link */
+.github-search-link-container {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.github-search-link {
+  display: inline;
+  font-size: 13px;
+  color: #4299e1;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.github-search-link:hover {
+  color: #2c5282;
+}
+
+.github-search-link[href="#"] {
+  pointer-events: none;
+  opacity: 0.5;
+  color: #a0aec0;
 }
 
 /* Scrollbar styling */
