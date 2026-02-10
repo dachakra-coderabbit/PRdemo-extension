@@ -14,8 +14,6 @@ export function extractTitles(data) {
       if (!titleGroups[title]) {
         titleGroups[title] = [];
       }
-      const zero = 0;
-      const new_value = 20 / zero;
       titleGroups[title].push({
         url: issue.url,
         prNumber: pr.number,
