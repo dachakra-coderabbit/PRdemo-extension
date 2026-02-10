@@ -1,18 +1,22 @@
 // Side panel script for CodeRabbit PR Analyzer
 
 import {
-  extractTitles,
   calculateSimilarity,
   groupSimilarTitles,
   initializePriorityFilter,
-  applyPriorityFilter,
   displayDistribution,
   displayTitles,
-  escapeHtml
+  escapeHtml,
+  initializeAcceptanceFilter,
+  applyCombinedFilters,
+  applyManualAcceptanceState,
+  toggleManualAcceptance,
+  loadManualAcceptanceState
 } from './filter-utils.js';
 
 let currentData = null;
 let selectedPriorities = new Set(['all']);
+let selectedAcceptanceStatus = 'all';
 
 // Initialize date inputs with default values
 document.addEventListener('DOMContentLoaded', () => {
@@ -248,10 +252,11 @@ async function handleAnalyze() {
   }
 }
 
-function displayResults(data) {
+async function displayResults(data) {
   // Store data for filtering
   currentData = data;
   selectedPriorities = new Set(['all']);
+  selectedAcceptanceStatus = 'all';
 
   // Show results section
   document.getElementById('results').style.display = 'block';
@@ -262,10 +267,12 @@ function displayResults(data) {
   document.getElementById('totalComments').textContent = data.summary.totalActionableIssues;
   document.getElementById('avgComments').textContent = data.summary.avgIssuesPerPR;
 
+  // Apply saved manual acceptance states (must be done before extractTitles)
+  await applyManualAcceptanceState(data);
+
   // Calculate distributions
   const severityDist = calculateDistribution(data, 'severity');
   const priorityDist = calculateDistribution(data, 'priority');
-  const titles = extractTitles(data);
 
   // Display severity distribution
   displayDistribution('severityDistribution', severityDist);
@@ -275,11 +282,27 @@ function displayResults(data) {
 
   // Initialize priority filter with callback
   initializePriorityFilter(data, selectedPriorities, () => {
-    applyPriorityFilter(currentData, selectedPriorities, displayTitles);
+    applyCombinedFilters(currentData, selectedPriorities, selectedAcceptanceStatus, displayTitles);
   });
 
-  // Display titles with selectedPriorities
-  displayTitles('commentTitles', titles, selectedPriorities);
+  // Initialize acceptance filter with callback
+  initializeAcceptanceFilter(data, selectedAcceptanceStatus, (newStatus) => {
+    selectedAcceptanceStatus = newStatus;
+    applyCombinedFilters(currentData, selectedPriorities, selectedAcceptanceStatus, displayTitles);
+  });
+
+  // Define acceptance toggle callback
+  const onAcceptanceToggle = async (url, currentState) => {
+    const newState = await toggleManualAcceptance(url, currentState);
+    // Reapply filters to update the display
+    applyCombinedFilters(currentData, selectedPriorities, selectedAcceptanceStatus, displayTitles);
+    return newState;
+  };
+
+  // Apply initial filters to display titles with updated counts
+  applyCombinedFilters(currentData, selectedPriorities, selectedAcceptanceStatus, (elementId, filteredTitles, priorities, acceptance) => {
+    displayTitles(elementId, filteredTitles, priorities, acceptance, currentData, onAcceptanceToggle);
+  });
 
   // Scroll to results
   document.getElementById('results').scrollIntoView({ behavior: 'smooth' });

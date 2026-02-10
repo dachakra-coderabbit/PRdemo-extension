@@ -103,6 +103,22 @@
         </div>
       </div>
 
+      <!-- Acceptance Filter -->
+      <div class="acceptance-filter-section" id="acceptanceFilterSection" style="display: none;">
+        <div class="acceptance-filter-label">Filter by Acceptance:</div>
+        <div class="acceptance-filter-controls" id="acceptanceFilterControls">
+          <button class="acceptance-filter-btn active" data-acceptance="all">
+            All (<span class="priority-count" id="acceptanceCountAll">0</span>)
+          </button>
+          <button class="acceptance-filter-btn" data-acceptance="accepted">
+            ✓ Accepted (<span class="priority-count" id="acceptanceCountAccepted">0</span>)
+          </button>
+          <button class="acceptance-filter-btn" data-acceptance="not-accepted">
+            ○ Not Accepted (<span class="priority-count" id="acceptanceCountNotAccepted">0</span>)
+          </button>
+        </div>
+      </div>
+
       <!-- Comment Titles -->
       <div class="titles-section">
         <h2>📝 All Comment Titles</h2>

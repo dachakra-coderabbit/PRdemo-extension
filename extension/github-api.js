@@ -211,7 +211,9 @@ class GitHubAPI {
       title,
       description,
       url: '',
-      timestamp: ''
+      timestamp: '',
+      accepted: false,
+      acceptanceMethod: null
     };
   }
 
@@ -242,6 +244,87 @@ class GitHubAPI {
       console.error(`Error fetching comments for PR #${prNumber}:`, error);
       return [];
     }
+  }
+
+  async fetchGraphQLThreads(prNumber) {
+    try {
+      const query = `
+        query($owner: String!, $repo: String!, $prNumber: Int!) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $prNumber) {
+              reviewThreads(first: 100) {
+                nodes {
+                  id
+                  isResolved
+                  comments(first: 100) {
+                    nodes {
+                      id
+                      databaseId
+                      url
+                      author {
+                        login
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'CodeRabbit-Analyzer-Extension'
+      };
+
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`;
+      }
+
+      const response = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query,
+          variables: {
+            owner: this.owner,
+            repo: this.repo,
+            prNumber: prNumber
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`GraphQL request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.errors) {
+        console.error('GraphQL errors:', data.errors);
+        return [];
+      }
+
+      return data.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
+    } catch (error) {
+      console.error(`Error fetching GraphQL threads for PR #${prNumber}:`, error);
+      return [];
+    }
+  }
+
+  detectSuggestionInComment(commentBody) {
+    if (!commentBody) return false;
+
+    // Look for CodeRabbit committable suggestion patterns
+    const patterns = [
+      /```suggestion/i,
+      /committable suggestion/i,
+      /suggested change/i
+    ];
+
+    return patterns.some(pattern => pattern.test(commentBody));
   }
 
   async analyzePRs(progressCallback) {
@@ -304,7 +387,11 @@ class GitHubAPI {
         const batchResults = await Promise.all(
           batch.map(async (pr) => {
             try {
-              const comments = await this.fetchPRComments(pr.number);
+              // Fetch comments and GraphQL threads in parallel
+              const [comments, graphqlThreads] = await Promise.all([
+                this.fetchPRComments(pr.number),
+                this.fetchGraphQLThreads(pr.number)
+              ]);
 
               if (comments.length === 0) return null;
 
@@ -315,6 +402,34 @@ class GitHubAPI {
                 if (issue) {
                   issue.url = comment.html_url;
                   issue.timestamp = comment.created_at;
+
+                  // Detect acceptance using GraphQL thread resolution
+                  // Priority: GraphQL > comment parsing > default (false)
+                  let accepted = false;
+                  let acceptanceMethod = null;
+
+                  // Try to find matching thread in GraphQL results
+                  const matchingThread = graphqlThreads.find(thread =>
+                    thread.comments?.nodes?.some(c => c.url === comment.html_url)
+                  );
+
+                  if (matchingThread) {
+                    // GraphQL has highest priority
+                    if (matchingThread.isResolved) {
+                      accepted = true;
+                      acceptanceMethod = 'graphql';
+                    }
+                  } else {
+                    // Fallback to comment body parsing
+                    const hasSuggestion = this.detectSuggestionInComment(comment.body);
+                    // Note: This only detects if a suggestion exists, not if it was applied
+                    // So we don't mark as accepted based on parsing alone
+                    // This is just for future reference or manual override
+                  }
+
+                  issue.accepted = accepted;
+                  issue.acceptanceMethod = acceptanceMethod;
+
                   actionableIssues.push(issue);
                 }
               }

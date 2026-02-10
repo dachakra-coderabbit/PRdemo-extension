@@ -353,6 +353,94 @@ h1 {
   font-weight: 600;
 }
 
+/* Acceptance Filter Section */
+.acceptance-filter-section {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+}
+
+.acceptance-filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 10px;
+}
+
+.acceptance-filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.acceptance-filter-btn {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: white;
+  color: #4a5568;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.acceptance-filter-btn:hover {
+  border-color: #48bb78;
+  background: #f0fff4;
+}
+
+.acceptance-filter-btn.active {
+  background: #48bb78;
+  color: white;
+  border-color: #48bb78;
+}
+
+/* Acceptance Toggle Button */
+.acceptance-toggle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e0;
+  background: white;
+  color: #a0aec0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  padding: 0;
+  line-height: 1;
+}
+
+.acceptance-toggle:hover {
+  border-color: #48bb78;
+  background: #f0fff4;
+}
+
+.acceptance-toggle.accepted {
+  background: #48bb78;
+  color: white;
+  border-color: #48bb78;
+}
+
+.acceptance-method {
+  font-size: 11px;
+  color: #718096;
+  margin-left: 8px;
+  font-style: italic;
+}
+
+.title-occurrence {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+}
+
 .titles-section {
   background: white;
   padding: 20px;
