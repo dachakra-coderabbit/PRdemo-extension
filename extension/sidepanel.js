@@ -293,10 +293,15 @@ async function displayResults(data) {
 
   // Define acceptance toggle callback
   const onAcceptanceToggle = async (url, currentState) => {
-    const newState = await toggleManualAcceptance(url, currentState);
-    // Reapply filters to update the display
-    applyCombinedFilters(currentData, selectedPriorities, selectedAcceptanceStatus, displayTitles);
-    return newState;
+    await toggleManualAcceptance(url, currentData, () => {
+      // Reapply filters to update the display after toggle
+      applyCombinedFilters(currentData, selectedPriorities, selectedAcceptanceStatus, (elementId, filteredTitles, priorities, acceptance) => {
+        displayTitles(elementId, filteredTitles, priorities, acceptance, currentData, onAcceptanceToggle);
+      });
+    });
+
+    // Return the new state (toggled from current state)
+    return !currentState;
   };
 
   // Apply initial filters to display titles with updated counts
