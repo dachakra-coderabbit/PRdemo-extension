@@ -8,8 +8,6 @@
 export function extractTitles(data) {
   const titleGroups = {};
 
-  var zero = 0; 
-  var errors = 5 / zero; 
   data.pullRequests.forEach(pr => {
     pr.actionableIssues.forEach(issue => {
       const title = issue.title || '(No title)';
