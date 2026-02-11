@@ -370,7 +370,15 @@ export function displayTitles(elementId, groups, selectedPriorities, selectedAcc
           link.target = '_blank';
           link.className = 'comment-link';
           link.title = 'View comment on GitHub';
-          link.textContent = `🔗 PR #${occurrence.prNumber}${occurrence.accepted ? ' ✅' : ''}`;
+
+          let linkText = `🔗 PR #${occurrence.prNumber}`;
+          if (occurrence.accepted) {
+            linkText += ' ✅';
+            if (occurrence.acceptanceMethod === 'body-parsing') {
+              linkText += ' (auto detect)';
+            }
+          }
+          link.textContent = linkText;
 
           linkDiv.appendChild(link);
           itemsContainer.appendChild(linkDiv);
@@ -411,7 +419,15 @@ export function displayTitles(elementId, groups, selectedPriorities, selectedAcc
         link.target = '_blank';
         link.className = 'comment-link';
         link.title = 'View comment on GitHub';
-        link.textContent = `🔗 PR #${occurrence.prNumber}${occurrence.accepted ? ' ✅' : ''}`;
+
+        let linkText = `🔗 PR #${occurrence.prNumber}`;
+        if (occurrence.accepted) {
+          linkText += ' ✅';
+          if (occurrence.acceptanceMethod === 'body-parsing') {
+            linkText += ' (auto detect)';
+          }
+        }
+        link.textContent = linkText;
 
         linkDiv.appendChild(link);
         occurrencesContainer.appendChild(linkDiv);
