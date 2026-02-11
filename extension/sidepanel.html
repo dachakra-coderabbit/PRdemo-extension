@@ -92,14 +92,21 @@
         <div id="priorityDistribution" class="distribution-grid"></div>
       </div>
 
-      <!-- Priority Filter -->
+      <!-- Filters (Priority + Acceptance) -->
       <div class="priority-filter-section" id="priorityFilterSection" style="display: none;">
-        <div class="priority-filter-label">Filter by Priority:</div>
+        <div class="priority-filter-label">Filters:</div>
         <div class="priority-filter-controls" id="priorityFilterControls">
           <button class="priority-filter-btn active" data-priority="all">
             All (<span class="priority-count" id="priorityCountAll">0</span>)
           </button>
           <!-- Dynamic buttons for each priority will be added via JS -->
+          <!-- Acceptance filter buttons -->
+          <button class="priority-filter-btn" data-acceptance="accepted">
+            ✅ Accepted (<span class="priority-count" id="acceptanceCountAccepted">0</span>)
+          </button>
+          <button class="priority-filter-btn" data-acceptance="not-accepted">
+            ○ Not Accepted (<span class="priority-count" id="acceptanceCountNotAccepted">0</span>)
+          </button>
         </div>
       </div>
 
