@@ -261,6 +261,7 @@ class GitHubAPI {
                       id
                       databaseId
                       url
+                      body
                       author {
                         login
                       }
@@ -306,6 +307,31 @@ class GitHubAPI {
       console.error(`Error fetching GraphQL threads for PR #${prNumber}:`, error);
       return [];
     }
+  }
+
+  detectAddressedInComment(commentBody) {
+    if (!commentBody) return false;
+
+    // Look for patterns indicating the issue was addressed in a commit
+    const patterns = [
+      /✅\s*Addressed in commit/i,
+      /✅\s*Applied in commit/i,
+      /Addressed\s+in\s+commit/i,
+      /Applied\s+in\s+commit/i,
+      /Fixed\s+in\s+commit/i,
+      /Resolved\s+in\s+commit/i,
+      /✓\s*Addressed in commit/i,  // Alternative checkmark
+      /✓\s*Applied in commit/i
+    ];
+
+    const found = patterns.some(pattern => pattern.test(commentBody));
+
+    // Debug logging
+    if (found) {
+      console.log('✅ Body parsing detected "Addressed in commit" pattern in comment body:', commentBody.substring(0, 100));
+    }
+
+    return found;
   }
 
   async analyzePRs(progressCallback) {
@@ -384,7 +410,8 @@ class GitHubAPI {
                   issue.url = comment.html_url;
                   issue.timestamp = comment.created_at;
 
-                  // Try to find matching thread for this comment to check if resolved
+                  // Check for acceptance using multiple methods
+                  // Method 1: GraphQL thread resolution
                   const matchingThread = threads.find(thread =>
                     thread.comments.nodes.some(threadComment =>
                       threadComment.url === comment.html_url ||
@@ -392,9 +419,29 @@ class GitHubAPI {
                     )
                   );
 
-                  if (matchingThread && matchingThread.isResolved) {
+                  const isResolvedViaGraphQL = matchingThread && matchingThread.isResolved;
+
+                  // Method 2: Comment body parsing for "Addressed in commit" patterns
+                  // Check BOTH the original comment AND all thread replies
+                  // (CodeRabbit may edit the original comment OR post a reply)
+                  let isAddressedInBody = false;
+
+                  // First, always check the original comment body (might have been edited)
+                  isAddressedInBody = this.detectAddressedInComment(comment.body);
+
+                  // Also check all replies in the thread if there is one
+                  if (!isAddressedInBody && matchingThread) {
+                    isAddressedInBody = matchingThread.comments.nodes.some(threadComment =>
+                      this.detectAddressedInComment(threadComment.body)
+                    );
+                  }
+
+                  // Mark as accepted if either method detects it
+                  if (isResolvedViaGraphQL || isAddressedInBody) {
                     issue.accepted = true;
-                    issue.acceptanceMethod = 'graphql';
+                    // Prioritize body-parsing if it detects "Addressed in commit" text
+                    // (so the "(auto detect)" label shows to the user)
+                    issue.acceptanceMethod = isAddressedInBody ? 'body-parsing' : 'graphql';
                   }
 
                   actionableIssues.push(issue);
