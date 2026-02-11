@@ -211,7 +211,9 @@ class GitHubAPI {
       title,
       description,
       url: '',
-      timestamp: ''
+      timestamp: '',
+      accepted: false,
+      acceptanceMethod: null
     };
   }
 
@@ -240,6 +242,68 @@ class GitHubAPI {
       return comments;
     } catch (error) {
       console.error(`Error fetching comments for PR #${prNumber}:`, error);
+      return [];
+    }
+  }
+
+  async fetchGraphQLThreads(prNumber) {
+    try {
+      const query = `
+        query($owner: String!, $repo: String!, $prNumber: Int!) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $prNumber) {
+              reviewThreads(first: 100) {
+                nodes {
+                  id
+                  isResolved
+                  comments(first: 100) {
+                    nodes {
+                      id
+                      databaseId
+                      url
+                      author {
+                        login
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        owner: this.owner,
+        repo: this.repo,
+        prNumber: prNumber
+      };
+
+      const response = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GITHUB_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query, variables })
+      });
+
+      if (!response.ok) {
+        console.error(`GraphQL request failed for PR #${prNumber}:`, response.status);
+        return [];
+      }
+
+      const data = await response.json();
+
+      if (data.errors) {
+        console.error(`GraphQL errors for PR #${prNumber}:`, data.errors);
+        return [];
+      }
+
+      const threads = data.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
+      return threads;
+    } catch (error) {
+      console.error(`Error fetching GraphQL threads for PR #${prNumber}:`, error);
       return [];
     }
   }
@@ -304,7 +368,11 @@ class GitHubAPI {
         const batchResults = await Promise.all(
           batch.map(async (pr) => {
             try {
-              const comments = await this.fetchPRComments(pr.number);
+              // Fetch both REST comments and GraphQL threads in parallel
+              const [comments, threads] = await Promise.all([
+                this.fetchPRComments(pr.number),
+                this.fetchGraphQLThreads(pr.number)
+              ]);
 
               if (comments.length === 0) return null;
 
@@ -315,6 +383,20 @@ class GitHubAPI {
                 if (issue) {
                   issue.url = comment.html_url;
                   issue.timestamp = comment.created_at;
+
+                  // Try to find matching thread for this comment to check if resolved
+                  const matchingThread = threads.find(thread =>
+                    thread.comments.nodes.some(threadComment =>
+                      threadComment.url === comment.html_url ||
+                      threadComment.databaseId === comment.id
+                    )
+                  );
+
+                  if (matchingThread && matchingThread.isResolved) {
+                    issue.accepted = true;
+                    issue.acceptanceMethod = 'graphql';
+                  }
+
                   actionableIssues.push(issue);
                 }
               }

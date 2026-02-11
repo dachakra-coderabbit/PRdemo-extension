@@ -18,7 +18,9 @@ export function extractTitles(data) {
         url: issue.url,
         prNumber: pr.number,
         prTitle: pr.title,
-        priority: issue.priority
+        priority: issue.priority,
+        accepted: issue.accepted || false,
+        acceptanceMethod: issue.acceptanceMethod || null
       });
     });
   });
@@ -101,12 +103,14 @@ export function groupSimilarTitles(titles) {
 }
 
 /**
- * Initializes priority filter UI and event handlers
+ * Initializes combined priority and acceptance filter UI and event handlers
  * @param {Object} data - The PR analysis data
  * @param {Set} selectedPriorities - Set of currently selected priorities
- * @param {Function} onFilterChange - Callback when filter changes
+ * @param {string} selectedAcceptanceStatus - Currently selected acceptance status
+ * @param {Function} onPriorityChange - Callback when priority filter changes
+ * @param {Function} onAcceptanceChange - Callback when acceptance filter changes
  */
-export function initializePriorityFilter(data, selectedPriorities, onFilterChange) {
+export function initializePriorityFilter(data, selectedPriorities, selectedAcceptanceStatus, onPriorityChange, onAcceptanceChange) {
   // Extract unique priorities and their counts
   const priorityCounts = {};
   let totalTitles = 0;
@@ -129,8 +133,11 @@ export function initializePriorityFilter(data, selectedPriorities, onFilterChang
   // Get the controls container
   const controlsContainer = document.getElementById('priorityFilterControls');
 
-  // Clear any existing dynamic buttons (keep the "All" button)
+  // Save the "All" button and acceptance buttons before clearing
   const allButton = controlsContainer.querySelector('[data-priority="all"]');
+  const acceptedButton = controlsContainer.querySelector('[data-acceptance="accepted"]');
+  const notAcceptedButton = controlsContainer.querySelector('[data-acceptance="not-accepted"]');
+
   controlsContainer.innerHTML = '';
   controlsContainer.appendChild(allButton);
 
@@ -145,19 +152,29 @@ export function initializePriorityFilter(data, selectedPriorities, onFilterChang
       controlsContainer.appendChild(button);
     });
 
-  // Add click handlers to all filter buttons
-  controlsContainer.querySelectorAll('.priority-filter-btn').forEach(button => {
+  // Re-add acceptance buttons at the end
+  if (acceptedButton) controlsContainer.appendChild(acceptedButton);
+  if (notAcceptedButton) controlsContainer.appendChild(notAcceptedButton);
+
+  // Add click handlers to priority filter buttons
+  controlsContainer.querySelectorAll('[data-priority]').forEach(button => {
     button.addEventListener('click', () => {
       const priority = button.getAttribute('data-priority');
 
       if (priority === 'all') {
-        // Select all, deselect others
+        // Select all, deselect all filters (priority and acceptance)
         selectedPriorities.clear();
         selectedPriorities.add('all');
-        controlsContainer.querySelectorAll('.priority-filter-btn').forEach(btn => {
+        controlsContainer.querySelectorAll('[data-priority]').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        controlsContainer.querySelectorAll('[data-acceptance]').forEach(btn => {
           btn.classList.remove('active');
         });
         button.classList.add('active');
+
+        // Reset acceptance filter to 'all'
+        if (onAcceptanceChange) onAcceptanceChange('all');
       } else {
         // Toggle specific priority
         if (selectedPriorities.has('all')) {
@@ -174,6 +191,11 @@ export function initializePriorityFilter(data, selectedPriorities, onFilterChang
         if (selectedPriorities.size === 0) {
           selectedPriorities.add('all');
           allButton.classList.add('active');
+          // Also reset acceptance filter
+          controlsContainer.querySelectorAll('[data-acceptance]').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          if (onAcceptanceChange) onAcceptanceChange('all');
         } else {
           allButton.classList.remove('active');
         }
@@ -183,7 +205,41 @@ export function initializePriorityFilter(data, selectedPriorities, onFilterChang
       }
 
       // Call the filter change callback
-      onFilterChange();
+      if (onPriorityChange) onPriorityChange();
+    });
+  });
+
+  // Add click handlers to acceptance filter buttons
+  controlsContainer.querySelectorAll('[data-acceptance]').forEach(button => {
+    button.addEventListener('click', () => {
+      const status = button.getAttribute('data-acceptance');
+      const isCurrentlyActive = button.classList.contains('active');
+
+      if (isCurrentlyActive) {
+        // Clicking the same button again deselects it and shows all
+        button.classList.remove('active');
+        // Activate the "All" button
+        if (allButton) {
+          selectedPriorities.clear();
+          selectedPriorities.add('all');
+          controlsContainer.querySelectorAll('[data-priority]').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          allButton.classList.add('active');
+        }
+        // Reset to show all
+        if (onAcceptanceChange) onAcceptanceChange('all');
+        if (onPriorityChange) onPriorityChange();
+      } else {
+        // Update active state - only one acceptance filter can be active
+        controlsContainer.querySelectorAll('[data-acceptance]').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        button.classList.add('active');
+
+        // Call the acceptance change callback
+        if (onAcceptanceChange) onAcceptanceChange(status);
+      }
     });
   });
 }
@@ -248,15 +304,16 @@ export function displayDistribution(elementId, distribution) {
  * @param {string} elementId - ID of the container element
  * @param {Array} groups - Array of title groups
  * @param {Set} selectedPriorities - Set of selected priorities (for empty state message)
+ * @param {string} selectedAcceptanceStatus - Currently selected acceptance status (for empty state message)
  */
-export function displayTitles(elementId, groups, selectedPriorities) {
+export function displayTitles(elementId, groups, selectedPriorities, selectedAcceptanceStatus = 'all') {
   const container = document.getElementById(elementId);
   container.innerHTML = '';
 
   if (groups.length === 0) {
-    const message = selectedPriorities.has('all')
+    const message = selectedPriorities.has('all') && selectedAcceptanceStatus === 'all'
       ? 'No titles found'
-      : 'No titles match the selected priority filters';
+      : 'No titles match the selected filters';
     container.innerHTML = `<div class="empty-state">${message}</div>`;
     return;
   }
@@ -307,11 +364,15 @@ export function displayTitles(elementId, groups, selectedPriorities) {
         item.occurrences.forEach(occurrence => {
           const linkDiv = document.createElement('div');
           linkDiv.className = 'title-occurrence';
-          linkDiv.innerHTML = `
-            <a href="${occurrence.url}" target="_blank" class="comment-link" title="View comment on GitHub">
-              🔗 PR #${occurrence.prNumber}
-            </a>
-          `;
+
+          const link = document.createElement('a');
+          link.href = occurrence.url;
+          link.target = '_blank';
+          link.className = 'comment-link';
+          link.title = 'View comment on GitHub';
+          link.textContent = `🔗 PR #${occurrence.prNumber}${occurrence.accepted ? ' ✅' : ''}`;
+
+          linkDiv.appendChild(link);
           itemsContainer.appendChild(linkDiv);
         });
       });
@@ -344,11 +405,15 @@ export function displayTitles(elementId, groups, selectedPriorities) {
       group.allOccurrences.forEach(occurrence => {
         const linkDiv = document.createElement('div');
         linkDiv.className = 'title-occurrence';
-        linkDiv.innerHTML = `
-          <a href="${occurrence.url}" target="_blank" class="comment-link" title="View comment on GitHub">
-            🔗 PR #${occurrence.prNumber}
-          </a>
-        `;
+
+        const link = document.createElement('a');
+        link.href = occurrence.url;
+        link.target = '_blank';
+        link.className = 'comment-link';
+        link.title = 'View comment on GitHub';
+        link.textContent = `🔗 PR #${occurrence.prNumber}${occurrence.accepted ? ' ✅' : ''}`;
+
+        linkDiv.appendChild(link);
         occurrencesContainer.appendChild(linkDiv);
       });
 
@@ -368,4 +433,232 @@ export function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Loads manual acceptance state from storage
+ * @returns {Promise<Object>} Map of URL to acceptance state
+ */
+export async function loadManualAcceptanceState() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['manualAcceptanceState'], (result) => {
+      resolve(result.manualAcceptanceState || {});
+    });
+  });
+}
+
+/**
+ * Saves manual acceptance state to storage
+ * @param {Object} state - Map of URL to acceptance state
+ */
+export async function saveManualAcceptanceState(state) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ manualAcceptanceState: state }, resolve);
+  });
+}
+
+/**
+ * Applies manual acceptance state to PR data
+ * @param {Object} data - The PR analysis data
+ */
+export async function applyManualAcceptanceState(data) {
+  const manualState = await loadManualAcceptanceState();
+
+  data.pullRequests.forEach(pr => {
+    pr.actionableIssues.forEach(issue => {
+      if (manualState[issue.url] !== undefined) {
+        issue.accepted = manualState[issue.url];
+        issue.acceptanceMethod = 'manual';
+      }
+    });
+  });
+}
+
+/**
+ * Toggles manual acceptance for a comment URL
+ * @param {string} url - The comment URL
+ * @param {Object} currentData - Current PR data
+ * @param {Function} onToggle - Callback after toggle
+ */
+export async function toggleManualAcceptance(url, currentData, onToggle) {
+  const state = await loadManualAcceptanceState();
+
+  // Find the current issue to get its current state
+  let currentAccepted = false;
+  for (const pr of currentData.pullRequests) {
+    const issue = pr.actionableIssues.find(i => i.url === url);
+    if (issue) {
+      currentAccepted = issue.accepted;
+      break;
+    }
+  }
+
+  // Toggle the state
+  const newState = !currentAccepted;
+  state[url] = newState;
+  await saveManualAcceptanceState(state);
+
+  // Update in memory
+  for (const pr of currentData.pullRequests) {
+    const issue = pr.actionableIssues.find(i => i.url === url);
+    if (issue) {
+      issue.accepted = newState;
+      issue.acceptanceMethod = 'manual';
+    }
+  }
+
+  if (onToggle) {
+    onToggle();
+  }
+}
+
+/**
+ * Initializes acceptance filter UI
+ * @param {Object} data - The PR analysis data
+ * @param {string} selectedAcceptanceStatus - Currently selected acceptance status
+ * @param {Function} onChange - Callback when filter changes
+ */
+export function initializeAcceptanceFilter(data, selectedAcceptanceStatus, onChange) {
+  const filterSection = document.getElementById('acceptanceFilterSection');
+  const filterControls = document.getElementById('acceptanceFilterControls');
+
+  if (!filterSection || !filterControls) return;
+
+  // Show the filter section
+  filterSection.style.display = 'block';
+
+  // Get all buttons
+  const buttons = filterControls.querySelectorAll('.acceptance-filter-btn');
+
+  // Add click handlers
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const status = btn.dataset.acceptance;
+
+      // Update active state
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Call onChange callback
+      if (onChange) {
+        onChange(status);
+      }
+    });
+  });
+}
+
+/**
+ * Updates filter counts dynamically based on current filters
+ * @param {Object} currentData - The PR analysis data
+ * @param {Set} selectedPriorities - Currently selected priorities
+ * @param {string} selectedAcceptanceStatus - Currently selected acceptance status
+ */
+export function updateFilterCounts(currentData, selectedPriorities, selectedAcceptanceStatus) {
+  const titles = extractTitles(currentData);
+
+  // Count for priority filter (based on acceptance filter)
+  const priorityCounts = { all: 0 };
+  const allPriorities = new Set();
+
+  titles.forEach(group => {
+    group.allOccurrences.forEach(occurrence => {
+      allPriorities.add(occurrence.priority);
+
+      // Apply acceptance filter
+      let matchesAcceptance = true;
+      if (selectedAcceptanceStatus === 'accepted') {
+        matchesAcceptance = occurrence.accepted;
+      } else if (selectedAcceptanceStatus === 'not-accepted') {
+        matchesAcceptance = !occurrence.accepted;
+      }
+
+      if (matchesAcceptance) {
+        priorityCounts.all++;
+        priorityCounts[occurrence.priority] = (priorityCounts[occurrence.priority] || 0) + 1;
+      }
+    });
+  });
+
+  // Update priority count displays
+  const allCountEl = document.getElementById('priorityCountAll');
+  if (allCountEl) allCountEl.textContent = priorityCounts.all;
+
+  allPriorities.forEach(priority => {
+    const countEl = document.getElementById(`priorityCount${priority.replace(/\s+/g, '')}`);
+    if (countEl) countEl.textContent = priorityCounts[priority] || 0;
+  });
+
+  // Count for acceptance filter (based on priority filter)
+  const acceptanceCounts = { all: 0, accepted: 0, notAccepted: 0 };
+
+  titles.forEach(group => {
+    group.allOccurrences.forEach(occurrence => {
+      // Apply priority filter
+      const matchesPriority = selectedPriorities.has('all') || selectedPriorities.has(occurrence.priority);
+
+      if (matchesPriority) {
+        acceptanceCounts.all++;
+        if (occurrence.accepted) {
+          acceptanceCounts.accepted++;
+        } else {
+          acceptanceCounts.notAccepted++;
+        }
+      }
+    });
+  });
+
+  // Update acceptance count displays
+  const acceptanceAllEl = document.getElementById('acceptanceCountAll');
+  const acceptanceAcceptedEl = document.getElementById('acceptanceCountAccepted');
+  const acceptanceNotAcceptedEl = document.getElementById('acceptanceCountNotAccepted');
+
+  if (acceptanceAllEl) acceptanceAllEl.textContent = acceptanceCounts.all;
+  if (acceptanceAcceptedEl) acceptanceAcceptedEl.textContent = acceptanceCounts.accepted;
+  if (acceptanceNotAcceptedEl) acceptanceNotAcceptedEl.textContent = acceptanceCounts.notAccepted;
+}
+
+/**
+ * Applies combined priority and acceptance filters
+ * @param {Object} currentData - The PR analysis data
+ * @param {Set} selectedPriorities - Currently selected priorities
+ * @param {string} selectedAcceptanceStatus - Currently selected acceptance status
+ * @param {Function} displayCallback - Callback to display filtered results
+ */
+export function applyCombinedFilters(currentData, selectedPriorities, selectedAcceptanceStatus, displayCallback) {
+  // Update counts first
+  updateFilterCounts(currentData, selectedPriorities, selectedAcceptanceStatus);
+
+  const titles = extractTitles(currentData);
+
+  // Filter titles based on both priority AND acceptance
+  const filteredTitles = titles.map(group => {
+    const filteredOccurrences = group.allOccurrences.filter(occurrence => {
+      // Check priority filter
+      const matchesPriority = selectedPriorities.has('all') || selectedPriorities.has(occurrence.priority);
+
+      // Check acceptance filter
+      let matchesAcceptance = true;
+      if (selectedAcceptanceStatus === 'accepted') {
+        matchesAcceptance = occurrence.accepted;
+      } else if (selectedAcceptanceStatus === 'not-accepted') {
+        matchesAcceptance = !occurrence.accepted;
+      }
+
+      // Must match BOTH filters (AND logic)
+      return matchesPriority && matchesAcceptance;
+    });
+
+    if (filteredOccurrences.length === 0) return null;
+
+    return {
+      ...group,
+      allOccurrences: filteredOccurrences,
+      totalCount: filteredOccurrences.length
+    };
+  }).filter(group => group !== null);
+
+  // Call display callback
+  if (displayCallback) {
+    displayCallback('commentTitles', filteredTitles, selectedPriorities, selectedAcceptanceStatus);
+  }
 }
