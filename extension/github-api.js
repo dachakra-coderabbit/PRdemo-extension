@@ -508,7 +508,7 @@ class GitHubAPI {
   }
 }
 
-// Export for use in popup.js and background service worker
+// Export for use in sidepanel.js and background service worker
 if (typeof window !== 'undefined') {
   window.GitHubAPI = GitHubAPI;
 }

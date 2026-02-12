@@ -126,10 +126,8 @@ project-root/
     ├── manifest.json       # Extension configuration
     ├── config.js          # Auto-generated from .env (DO NOT COMMIT)
     ├── sidepanel.html     # Side panel UI
-    ├── popup.html         # Popup UI
-    ├── popup.css          # Styling
     ├── sidepanel.js       # Side panel logic
-    ├── popup.js           # Popup logic
+    ├── styles.css         # Styling
     ├── github-api.js      # GitHub API wrapper
     └── background.js      # Service worker
 ```
