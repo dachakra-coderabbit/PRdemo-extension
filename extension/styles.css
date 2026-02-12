@@ -553,43 +553,6 @@ h1 {
   background: #a0aec0;
 }
 
-/* Acceptance Toggle Button */
-.acceptance-toggle {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid #cbd5e0;
-  background: white;
-  color: #a0aec0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: bold;
-  margin-right: 8px;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-.acceptance-toggle:hover {
-  border-color: #48bb78;
-  background: #f0fff4;
-  transform: scale(1.1);
-}
-
-.acceptance-toggle.accepted {
-  background: #48bb78;
-  color: white;
-  border-color: #48bb78;
-}
-
-.acceptance-toggle.accepted:hover {
-  background: #38a169;
-  border-color: #38a169;
-}
-
 .title-occurrence {
   display: flex;
   align-items: center;

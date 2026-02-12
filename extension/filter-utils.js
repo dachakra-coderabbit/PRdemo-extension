@@ -245,33 +245,6 @@ export function initializePriorityFilter(data, selectedPriorities, selectedAccep
 }
 
 /**
- * Applies priority filter and displays filtered titles
- * @param {Object} currentData - The current PR data
- * @param {Set} selectedPriorities - Set of selected priorities
- * @param {Function} displayTitlesCallback - Function to display titles
- */
-export function applyPriorityFilter(currentData, selectedPriorities, displayTitlesCallback) {
-  if (!currentData) return;
-
-  // Extract and group titles
-  const titles = extractTitles(currentData);
-
-  // Filter by priority if not showing all
-  let filteredTitles = titles;
-  if (!selectedPriorities.has('all')) {
-    filteredTitles = titles.filter(group => {
-      // Check if any occurrence in the group matches selected priorities
-      return group.allOccurrences.some(occurrence =>
-        selectedPriorities.has(occurrence.priority)
-      );
-    });
-  }
-
-  // Display filtered titles
-  displayTitlesCallback('commentTitles', filteredTitles, selectedPriorities);
-}
-
-/**
  * Displays distribution data in a grid
  * @param {string} elementId - ID of the container element
  * @param {Array} distribution - Distribution data array
@@ -464,16 +437,6 @@ export async function loadManualAcceptanceState() {
 }
 
 /**
- * Saves manual acceptance state to storage
- * @param {Object} state - Map of URL to acceptance state
- */
-export async function saveManualAcceptanceState(state) {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ manualAcceptanceState: state }, resolve);
-  });
-}
-
-/**
  * Applies manual acceptance state to PR data
  * @param {Object} data - The PR analysis data
  */
@@ -485,79 +448,6 @@ export async function applyManualAcceptanceState(data) {
       if (manualState[issue.url] !== undefined) {
         issue.accepted = manualState[issue.url];
         issue.acceptanceMethod = 'manual';
-      }
-    });
-  });
-}
-
-/**
- * Toggles manual acceptance for a comment URL
- * @param {string} url - The comment URL
- * @param {Object} currentData - Current PR data
- * @param {Function} onToggle - Callback after toggle
- */
-export async function toggleManualAcceptance(url, currentData, onToggle) {
-  const state = await loadManualAcceptanceState();
-
-  // Find the current issue to get its current state
-  let currentAccepted = false;
-  for (const pr of currentData.pullRequests) {
-    const issue = pr.actionableIssues.find(i => i.url === url);
-    if (issue) {
-      currentAccepted = issue.accepted;
-      break;
-    }
-  }
-
-  // Toggle the state
-  const newState = !currentAccepted;
-  state[url] = newState;
-  await saveManualAcceptanceState(state);
-
-  // Update in memory
-  for (const pr of currentData.pullRequests) {
-    const issue = pr.actionableIssues.find(i => i.url === url);
-    if (issue) {
-      issue.accepted = newState;
-      issue.acceptanceMethod = 'manual';
-    }
-  }
-
-  if (onToggle) {
-    onToggle();
-  }
-}
-
-/**
- * Initializes acceptance filter UI
- * @param {Object} data - The PR analysis data
- * @param {string} selectedAcceptanceStatus - Currently selected acceptance status
- * @param {Function} onChange - Callback when filter changes
- */
-export function initializeAcceptanceFilter(data, selectedAcceptanceStatus, onChange) {
-  const filterSection = document.getElementById('acceptanceFilterSection');
-  const filterControls = document.getElementById('acceptanceFilterControls');
-
-  if (!filterSection || !filterControls) return;
-
-  // Show the filter section
-  filterSection.style.display = 'block';
-
-  // Get all buttons
-  const buttons = filterControls.querySelectorAll('.acceptance-filter-btn');
-
-  // Add click handlers
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const status = btn.dataset.acceptance;
-
-      // Update active state
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // Call onChange callback
-      if (onChange) {
-        onChange(status);
       }
     });
   });

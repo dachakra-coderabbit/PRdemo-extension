@@ -508,12 +508,7 @@ class GitHubAPI {
   }
 }
 
-// Export for use in sidepanel.js and background service worker
+// Export for use in sidepanel.js
 if (typeof window !== 'undefined') {
   window.GitHubAPI = GitHubAPI;
-}
-
-// Also export globally for service worker context
-if (typeof self !== 'undefined') {
-  self.GitHubAPI = GitHubAPI;
 }
