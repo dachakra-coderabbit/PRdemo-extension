@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CodeRabbit PR Analyzer",
+  "name": "CodeRabbit PR Hopper",
   "version": "1.0.0",
   "description": "Analyze CodeRabbit comments on GitHub PRs by organization and repository",
   "permissions": [
