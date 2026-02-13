@@ -191,11 +191,6 @@ export function initializePriorityFilter(data, selectedPriorities, selectedAccep
         if (selectedPriorities.size === 0) {
           selectedPriorities.add('all');
           allButton.classList.add('active');
-          // Also reset acceptance filter
-          controlsContainer.querySelectorAll('[data-acceptance]').forEach(btn => {
-            btn.classList.remove('active');
-          });
-          if (onAcceptanceChange) onAcceptanceChange('all');
         } else {
           allButton.classList.remove('active');
         }
@@ -218,18 +213,8 @@ export function initializePriorityFilter(data, selectedPriorities, selectedAccep
       if (isCurrentlyActive) {
         // Clicking the same button again deselects it and shows all
         button.classList.remove('active');
-        // Activate the "All" button
-        if (allButton) {
-          selectedPriorities.clear();
-          selectedPriorities.add('all');
-          controlsContainer.querySelectorAll('[data-priority]').forEach(btn => {
-            btn.classList.remove('active');
-          });
-          allButton.classList.add('active');
-        }
-        // Reset to show all
+        // Reset acceptance filter to 'all'
         if (onAcceptanceChange) onAcceptanceChange('all');
-        if (onPriorityChange) onPriorityChange();
       } else {
         // Update active state - only one acceptance filter can be active
         controlsContainer.querySelectorAll('[data-acceptance]').forEach(btn => {
