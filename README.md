@@ -40,22 +40,33 @@ Start Date: 2024-11-01
 End Date: 2025-02-01
 ```
 
-This searches all closed PRs in `supabase/supabase` from November through January.
+This searches all closed & merged PRs in `supabase/supabase` from November through January.
 
-## Filtering
+### Results
+**All Comment Titles** This section contains all the inline comments posted by CodeRabbit. The titles represent the actionable comment's title. We are using Jaccard similarity to group similar titles together to elminate noise.
+
+### Filtering
 
 Use the filter buttons to narrow down results:
 
 - **Priority Filters:** High, Medium, Low
 - **Acceptance Filters:** Accepted, Not Accepted
 
-Counts update in real-time as you toggle filters. Filtering by "High Priority + Not Accepted" shows unresolved critical issues.
+There's 2 types of Accepted Comments: 
+1. ✅  -> The inline comment was resolved:
+  a. When user add commit by clicking through CR's `Commitable Suggestion`
+  b. When user manually resolves comment. (May lead to false positives)
+  
+2. `(auto detect)` -> This means CR automatically detected the commit that resolved the comment and added "✅ Addressed in commit" to the body.
+
 
 ## Technical Details 
 
 ### Token (Optional)
 
-The extension currently is using a PAT token from a service account which will create isolation making it secure and safe. So there's no need to add your custom token, but if you want to add your own token follow these steps:  
+The extension uses a Personal Access Token (PAT) from a dedicated service account, ensuring secure and isolated access by default. There’s no need to provide your own token.
+
+However, if you prefer to use your own PAT, follow the steps below:
 
 ```bash
 cd extension
@@ -68,8 +79,8 @@ Then open `config.js` and replace the placeholder with your GitHub token:
 window.CONFIG = {
   GITHUB_TOKEN: 'ghp_yourActualTokenHere'
 };
-```
 Don't commit `config.js`. It's already in `.gitignore`.
+```
 
 
 ### Endpoints: 
@@ -101,6 +112,6 @@ GitHub's rate limits depend on authentication:
 
 The extension will warn you if it detects no token. You'll hit the limit fast without one—analyzing even 10-20 PRs can burn through 60 requests.
 
-### What Gets Grouped
 
+### What Gets Grouped
 The extension uses Jaccard similarity (60% threshold) to cluster similar comment titles. If CodeRabbit flags the same issue across multiple PRs, you'll see them grouped together with a count.
