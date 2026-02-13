@@ -21,23 +21,6 @@ A Chrome extension for analyzing CodeRabbit comments across your GitHub pull req
 ![Screenshot](/extension/loading-extension.png)
 You should see "CodeRabbit PR Hopper" appear in your extensions list. Pin it to your toolbar for easy access.
 
-## Setting Up Your Token (Optional)
-
-Copy the example config file and add your token:
-
-```bash
-cd extension
-cp config.example.js config.js
-```
-
-Then open `config.js` and replace the placeholder with your GitHub token:
-
-```javascript
-window.CONFIG = {
-  GITHUB_TOKEN: 'ghp_yourActualTokenHere'
-};
-```
-Don't commit `config.js`. It's already in `.gitignore`.
 
 ## Usage
 
@@ -59,11 +42,39 @@ End Date: 2025-02-01
 
 This searches all closed PRs in `supabase/supabase` from November through January.
 
-## How It Works: Two APIs
+## Filtering
 
+Use the filter buttons to narrow down results:
+
+- **Priority Filters:** High, Medium, Low
+- **Acceptance Filters:** Accepted, Not Accepted
+
+Counts update in real-time as you toggle filters. Filtering by "High Priority + Not Accepted" shows unresolved critical issues.
+
+## Technical Details 
+
+### Token (Optional)
+
+The extension currently is using a PAT token from a service account which will create isolation making it secure and safe. So there's no need to add your custom token, but if you want to add your own token follow these steps:  
+
+```bash
+cd extension
+cp config.example.js config.js
+```
+
+Then open `config.js` and replace the placeholder with your GitHub token:
+
+```javascript
+window.CONFIG = {
+  GITHUB_TOKEN: 'ghp_yourActualTokenHere'
+};
+```
+Don't commit `config.js`. It's already in `.gitignore`.
+
+
+### Endpoints: 
 We're hitting GitHub with two different APIs because each does something the other can't.
-
-### GitHub REST API
+#### GitHub REST API
 **What it's for:** Finding PRs and reading comments
 **Endpoint:** `https://api.github.com/search/issues`
 
@@ -71,19 +82,15 @@ The REST API lets us search for closed PRs in a date range and grab all the Code
 
 [GitHub REST API Docs](https://docs.github.com/en/rest)
 
-### GitHub GraphQL API
+#### GitHub GraphQL API
 **What it's for:** Checking if review threads are resolved
 **Endpoint:** `https://api.github.com/graphql`
 
-GraphQL gives us access to review thread metadata that isn't available in REST. Specifically, we need the `isResolved` field to know if someone marked a comment as resolved. We also check comment bodies for "Addressed in commit" text as a fallback.
+GraphQL gives us access to review thread metadata that isn't available in REST. Specifically, we need the `isResolved` field to know if someone marked a comment as resolved. We also check comment bodies for "✅ Addressed in commit" text
 
 [GitHub GraphQL API Docs](https://docs.github.com/en/graphql)
 
-### Why Both?
-
-REST API has better search capabilities. GraphQL has better thread metadata. We use REST to find PRs, then GraphQL to enrich each comment with resolution status. The combo gives us the full picture.
-
-## Rate Limits
+### Rate Limits
 
 GitHub's rate limits depend on authentication:
 
@@ -94,15 +101,6 @@ GitHub's rate limits depend on authentication:
 
 The extension will warn you if it detects no token. You'll hit the limit fast without one—analyzing even 10-20 PRs can burn through 60 requests.
 
-## What Gets Grouped
+### What Gets Grouped
 
 The extension uses Jaccard similarity (60% threshold) to cluster similar comment titles. If CodeRabbit flags the same issue across multiple PRs, you'll see them grouped together with a count.
-
-## Filtering
-
-Use the filter buttons to narrow down results:
-
-- **Priority Filters:** High, Medium, Low
-- **Acceptance Filters:** Accepted, Not Accepted
-
-Counts update in real-time as you toggle filters. Filtering by "High Priority + Not Accepted" shows unresolved critical issues.
