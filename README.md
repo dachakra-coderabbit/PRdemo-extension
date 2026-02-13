@@ -39,7 +39,7 @@ window.CONFIG = {
 ```
 Don't commit `config.js`. It's already in `.gitignore`.
 
-## Using It
+## Usage
 
 Click the extension icon to open the side panel. You'll see a form asking for:
 
