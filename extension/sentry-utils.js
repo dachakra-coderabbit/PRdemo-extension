@@ -57,19 +57,23 @@ function captureException(error, context = {}) {
   }
 
   try {
-    // Add context as tags/extras
+    // Clone the scope to avoid mutating the shared scope
+    const eventScope = sentryScope.clone();
+
+    // Add context as tags/extras on the cloned scope
     if (context.tags) {
       Object.entries(context.tags).forEach(([key, value]) => {
-        sentryScope.setTag(key, value);
+        eventScope.setTag(key, value);
       });
     }
     if (context.extra) {
       Object.entries(context.extra).forEach(([key, value]) => {
-        sentryScope.setExtra(key, value);
+        eventScope.setExtra(key, value);
       });
     }
 
-    sentryScope.captureException(error);
+    // Capture using the client with the cloned scope
+    sentryClient.captureException(error, undefined, eventScope);
   } catch (err) {
     console.error('Failed to capture exception:', err);
   }
@@ -88,19 +92,23 @@ function captureMessage(message, level = 'info', context = {}) {
   }
 
   try {
-    // Add context as tags/extras
+    // Clone the scope to avoid mutating the shared scope
+    const eventScope = sentryScope.clone();
+
+    // Add context as tags/extras on the cloned scope
     if (context.tags) {
       Object.entries(context.tags).forEach(([key, value]) => {
-        sentryScope.setTag(key, value);
+        eventScope.setTag(key, value);
       });
     }
     if (context.extra) {
       Object.entries(context.extra).forEach(([key, value]) => {
-        sentryScope.setExtra(key, value);
+        eventScope.setExtra(key, value);
       });
     }
 
-    sentryScope.captureMessage(message, level);
+    // Capture using the client with the cloned scope
+    sentryClient.captureMessage(message, level, undefined, eventScope);
   } catch (err) {
     console.error('Failed to capture message:', err);
   }
