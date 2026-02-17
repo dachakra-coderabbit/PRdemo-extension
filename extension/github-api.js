@@ -85,7 +85,24 @@ class GitHubAPI {
 
         return await response.json();
       } catch (error) {
-        if (i === retries - 1) throw error;
+        if (i === retries - 1) {
+          // Capture error with Sentry on final retry
+          if (window.SentryUtils) {
+            window.SentryUtils.captureException(error, {
+              tags: {
+                operation: 'fetch_with_retry',
+                owner: this.owner,
+                repo: this.repo || 'all'
+              },
+              extra: {
+                url: url,
+                retries: retries,
+                error_message: error.message
+              }
+            });
+          }
+          throw error;
+        }
         console.log(`Request failed, retrying (${i + 1}/${retries})...`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
       }
