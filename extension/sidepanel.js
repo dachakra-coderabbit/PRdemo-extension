@@ -14,6 +14,11 @@ let selectedAcceptanceStatus = 'all';
 
 // Initialize date inputs with default values
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Sentry for error tracking
+  if (window.SentryUtils) {
+    window.SentryUtils.initSentry();
+  }
+
   const today = new Date();
   const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
 
@@ -223,6 +228,22 @@ async function handleAnalyze() {
   setLoading(true);
   showProgress('⏳ Starting analysis...');
 
+  // Track usage with Sentry
+  if (window.SentryUtils) {
+    window.SentryUtils.captureMessage('PR Analysis Started', 'info', {
+      tags: {
+        organization: organization,
+        repository: repository || 'all',
+        has_repository: !!repository,
+        date_range_days: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
+      },
+      extra: {
+        start_date: startDate,
+        end_date: endDate
+      }
+    });
+  }
+
   try {
     // Run analysis directly in the side panel with hardcoded token
     const api = new GitHubAPI(organization, repository, startDate, endDate);
@@ -237,10 +258,41 @@ async function handleAnalyze() {
     currentData = data;
     hideProgress();
     displayResults(data);
+
+    // Track successful completion
+    if (window.SentryUtils) {
+      window.SentryUtils.captureMessage('PR Analysis Completed', 'info', {
+        tags: {
+          organization: organization,
+          repository: repository || 'all'
+        },
+        extra: {
+          total_prs: data.summary.totalPRs,
+          total_comments: data.summary.totalActionableIssues
+        }
+      });
+    }
   } catch (error) {
     console.error('Error analyzing PRs:', error);
     hideProgress();
     showError(error.message || 'Failed to analyze PRs. Please check your inputs and try again.');
+
+    // Capture error with Sentry
+    if (window.SentryUtils) {
+      window.SentryUtils.captureException(error, {
+        tags: {
+          organization: organization,
+          repository: repository || 'all',
+          has_repository: !!repository,
+          operation: 'analyze_prs'
+        },
+        extra: {
+          start_date: startDate,
+          end_date: endDate,
+          error_message: error.message
+        }
+      });
+    }
   } finally {
     setLoading(false);
   }
