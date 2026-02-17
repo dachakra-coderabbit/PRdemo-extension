@@ -27,7 +27,7 @@ You should see "CodeRabbit PR Hopper" appear in your extensions list. Pin it to 
 Click the extension icon to open the side panel. You'll see a form asking for:
 
 - **Organization/Owner**: `supabase` (if you want to analyze supabase/supabase)
-- **Repository**: `supase` (leave empty to search across all repos in the org)
+- **Repository**: `supase`(project name)
 - **Date Range**: Last 90 days is the default
 
 Click "Analyze PRs" and wait. It'll fetch closed & merged PRs, find CodeRabbit comments, and group similar feedback.
